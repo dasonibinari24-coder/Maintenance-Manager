@@ -1,0 +1,34 @@
+/* Landing-page refinement: clear two-path start */
+.hero { padding: 74px 0 88px; }
+.hero-grid { display: block; }
+.category-switch { display:flex; justify-content:center; gap:10px; margin-bottom:46px; }
+.category { padding:9px 15px; border-radius:999px; font-size:12px; color:#506077; background:#fff; border:1px solid #dce5f0; }
+.category.active { color:#174da9; background:#eaf1ff; border-color:#bfd2fb; font-weight:700; }
+.category.future { color:#7a8495; }
+.category.future b { margin-left:6px; color:#956c23; font-size:10px; font-weight:500; }
+.hero-heading { max-width:680px; margin:0 auto; text-align:center; }
+.hero-heading .lead { margin:auto; }
+.choice-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:850px; margin:45px auto 0; }
+.choice-card { min-height:260px; position:relative; overflow:hidden; padding:29px; border-radius:24px; text-decoration:none; color:#fff; transition:transform .25s, box-shadow .25s; }
+.choice-card:hover { transform:translateY(-5px); box-shadow:0 22px 35px #172b5c2e; }
+.choice-upload { background:linear-gradient(135deg,#1b5fe5 0%,#476fe8 57%,#7ca8ff 100%); }
+.choice-upload:after { content:''; position:absolute; width:220px; height:220px; right:-65px; bottom:-95px; border-radius:50%; background:#d5e5ff52; }
+.choice-guide { background:linear-gradient(135deg,#0a988c 0%,#14ba9e 58%,#8de2c2 100%); }
+.choice-guide:after { content:''; position:absolute; inset:auto -45px -80px auto; width:190px; height:190px; border-radius:40%; transform:rotate(28deg); background:#d7fff552; }
+.choice-card>* { position:relative; z-index:1; }
+.choice-icon { display:grid; place-items:center; width:39px; height:39px; border-radius:13px; background:#ffffff2e; font-size:21px; }
+.choice-card p { margin:29px 0 6px; font-size:13px; color:#ffffffc9; }
+.choice-card h2 { margin:0; font-size:30px; line-height:1.25; letter-spacing:-2px; }
+.choice-card span { position:absolute; left:29px; bottom:27px; font-size:13px; color:#ffffffdc; }
+.choice-card span b { margin-left:7px; font-size:20px; font-weight:400; }
+.centered { justify-content:center; }
+.compact-upload { max-width:650px; margin:54px auto 0; }
+.compact-upload .drop-zone { min-height:150px; }
+.compact-upload .consent { margin-top:3px; }
+.brand-mark { font-family:Georgia,serif; font-weight:700; }
+@media (max-width: 620px) {
+  .category-switch { align-items:center; flex-direction:column; margin-bottom:32px; }
+  .choice-grid { grid-template-columns:1fr; margin-top:34px; }
+  .choice-card { min-height:230px; }
+  .hero-heading h1 { font-size:38px; }
+}
