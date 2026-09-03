@@ -5,6 +5,7 @@ from io import BytesIO
 import json
 import zipfile
 import xml.etree.ElementTree as ET
+from qa_backend import QAConfigurationError, ask as ask_qa
 
 ROOT = Path(__file__).parent
 NS = {'hp': 'http://www.hancom.co.kr/hwpml/2011/paragraph'}
@@ -123,9 +124,17 @@ def fill_form12(data):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def cors_origin(self):
+        """Allow the two local addresses used when opening the portal."""
+        origin = self.headers.get('Origin', '')
+        if origin in ('http://127.0.0.1:8080', 'http://localhost:8080'):
+            return origin
+        return 'http://127.0.0.1:8080'
+
     def send_response_headers(self, length=0, name=''):
-        self.send_header('Access-Control-Allow-Origin', 'http://localhost:8080')
+        self.send_header('Access-Control-Allow-Origin', self.cors_origin())
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         if length:
             self.send_header('Content-Type', 'application/vnd.hancom.hwpx')
             self.send_header('Content-Length', str(length))
@@ -141,7 +150,7 @@ class Handler(BaseHTTPRequestHandler):
         with zipfile.ZipFile(template_for(previews[self.path])) as source:
             content = source.read('Preview/PrvImage.png')
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', 'http://localhost:8080')
+        self.send_header('Access-Control-Allow-Origin', self.cors_origin())
         self.send_header('Content-Type', 'image/png')
         self.send_header('Content-Length', str(len(content)))
         self.end_headers(); self.wfile.write(content)
@@ -149,6 +158,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             data = json.loads(self.rfile.read(int(self.headers.get('Content-Length', '0'))))
+            if self.path == '/qa/ask':
+                question = str(data.get('question', '')).strip()
+                if not question:
+                    payload = json.dumps({'error': '질문을 입력해 주세요.'}, ensure_ascii=False).encode('utf-8')
+                    self.send_response(400); self.send_header('Access-Control-Allow-Origin', self.cors_origin()); self.send_header('Content-Type', 'application/json; charset=utf-8'); self.send_header('Content-Length', str(len(payload))); self.end_headers(); self.wfile.write(payload); return
+                answer, sources = ask_qa(question)
+                payload = json.dumps({'answer': answer, 'sources': sources}, ensure_ascii=False).encode('utf-8')
+                self.send_response(200); self.send_header('Access-Control-Allow-Origin', self.cors_origin()); self.send_header('Content-Type', 'application/json; charset=utf-8'); self.send_header('Content-Length', str(len(payload))); self.end_headers(); self.wfile.write(payload); return
             if self.path == '/generate/form10':
                 content, name = fill_form10(data), 'form10-filled.hwpx'
             elif self.path == '/generate/form12':
@@ -156,6 +173,9 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.send_error(404); return
             self.send_response(200); self.send_response_headers(len(content), name); self.end_headers(); self.wfile.write(content)
+        except QAConfigurationError as error:
+            payload = json.dumps({'error': str(error)}, ensure_ascii=False).encode('utf-8')
+            self.send_response(503); self.send_header('Access-Control-Allow-Origin', self.cors_origin()); self.send_header('Content-Type', 'application/json; charset=utf-8'); self.send_header('Content-Length', str(len(payload))); self.end_headers(); self.wfile.write(payload)
         except Exception as error:
             self.send_response(500); self.send_response_headers(); self.end_headers(); self.wfile.write(str(error).encode())
 

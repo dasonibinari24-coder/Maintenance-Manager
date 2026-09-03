@@ -1,5 +1,9 @@
 const fileInput=document.querySelector('#file-input'),dropZone=document.querySelector('#drop-zone'),selectedFile=document.querySelector('#selected-file'),privacy=document.querySelector('#privacy-check'),notice=document.querySelector('#notice-check'),analyze=document.querySelector('#analyze-file'),analysisResult=document.querySelector('#analysis-result');
 let uploadedFile=null;
+fileInput.multiple=true;
+function showFiles(files){if(files.length<2)return;selectedFile.innerHTML=`<span class="file-dot">✓</span><span><b>${files.length}개 접수서류가 선택되었습니다.</b><small>${[...files].map(file=>file.name).join(' · ')}</small></span>`}
+dropZone.addEventListener('drop',event=>{const transfer=new DataTransfer();[...event.dataTransfer.files].forEach(file=>transfer.items.add(file));fileInput.files=transfer.files;showFiles(transfer.files)});
+fileInput.addEventListener('change',event=>showFiles(event.target.files));
 function refreshAnalyze(){analyze.disabled=!(uploadedFile&&privacy.checked&&notice.checked)}
 function classify(name){const n=name.toLowerCase();if(/기계|냉난방|환기|보일러|공조|급수|배수/.test(n))return{type:'기계설비 유지관리자 선임신고',detail:'기계설비 선임 기준과 신고 서식으로 안내합니다.',href:'#standards',color:'mechanical'};if(/정보통신|통신|네트워크|cctv|홈네트워크|방송/.test(n))return{type:'정보통신설비 유지관리자 선임신고',detail:'정보통신설비 선임 기준과 신고 서식으로 안내합니다.',href:'#calculator',color:'communication'};return{type:'시설관리 문서',detail:'파일명만으로는 유형을 특정하기 어렵습니다. 문서 내용을 확인해 적합한 안내로 연결합니다.',href:'#forms',color:'neutral'}}
 function setFile(file){if(!file)return;if(!/\.(pdf|jpg|jpeg|png|hwpx)$/i.test(file.name)){selectedFile.innerHTML='<span class="file-dot error">!</span><span>PDF, JPG, PNG, HWPX 파일만 선택할 수 있습니다.</span>';uploadedFile=null;refreshAnalyze();return}uploadedFile=file;const c=classify(file.name);selectedFile.innerHTML=`<span class="file-dot">✓</span><span><b>${file.name}</b><small>${(file.size/1024).toFixed(1)} KB · ${c.type}으로 분류 예정</small></span>`;analysisResult.innerHTML='';refreshAnalyze()}
