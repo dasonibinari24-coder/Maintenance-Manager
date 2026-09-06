@@ -3,8 +3,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from io import BytesIO
 import json
+import re
 import zipfile
 import xml.etree.ElementTree as ET
+from PIL import Image, ImageDraw, ImageFont
+import fitz
 from qa_backend import QAConfigurationError, ask as ask_qa
 
 ROOT = Path(__file__).parent
@@ -16,6 +19,27 @@ def template_for(kind):
     if kind == 'form10':
         return next(p for p in ROOT.glob('*.hwpx') if p.name.endswith('선임ㆍ해임 신고서.hwpx'))
     return next(p for p in ROOT.glob('*.hwpx') if '선임신고증명서 발급신청서' in p.name)
+
+
+def admin_template_for(kind):
+    patterns = {
+        'draft': '정보통신설비 유지보수 관리자 선임 신고서 수리 알림',
+        'certificate': '정보통신설비 유지보수 관리자 선임신고 증명서',
+    }
+    return next(p for p in ROOT.glob('*.pdf') if patterns[kind] in p.name)
+
+
+def draft_without_approvals():
+    """The supplied draft is a completed example: remove approval names only."""
+    document = fitz.open(admin_template_for('draft'))
+    for page in document:
+        for name in ('김유경', '이용근', '정형석'):
+            for rect in page.search_for(name):
+                page.add_redact_annot(rect, fill=(1, 1, 1))
+        page.apply_redactions()
+    content = document.tobytes()
+    document.close()
+    return content
 
 
 def cell_at(table, col, row):
@@ -39,6 +63,22 @@ def put(table, col, row, value):
             raise ValueError(f'Missing text run at ({col}, {row})')
         text = ET.SubElement(run, f"{{{NS['hp']}}}t")
     text.text = (text.text or '') + '\n' + str(value)
+
+
+def put_area(table, value):
+    """Keep the entered area immediately beside the template's single ㎡ mark."""
+    if value in (None, ''):
+        return
+    cell = cell_at(table, 12, 6)
+    texts = cell.findall('.//hp:t', NS)
+    if not texts:
+        raise ValueError('Missing area text cell')
+    # The supplied HWPX keeps "연면적" and "㎡" in separate text runs.
+    # Put the value in the unit run so it reads naturally as "25026.07 ㎡".
+    unit = next((text for text in texts if '㎡' in (text.text or '')), None)
+    if unit is None:
+        unit = texts[-1]
+    unit.text = f'{value} ㎡'
 
 
 def checked(table, col, row):
@@ -81,9 +121,10 @@ def fill(template, data, fields, appointment=False):
                     if name == 'reportDate':
                         put_date_line(table, col, row, data.get(name, ''))
                         continue
-                    value = date_kr(data.get(name, '')) if name in {'appointmentDate', 'reportDate'} else data.get(name, '')
-                    if name == 'buildingArea' and value:
-                        value = f'{value} ㎡'
+                    value = date_kr(data.get(name, '')) if name in {'managerBirth', 'appointmentDate', 'reportDate'} else data.get(name, '')
+                    if name == 'buildingArea':
+                        put_area(table, value)
+                        continue
                     put(table, col, row, value)
                 if appointment:
                     mode = data.get('appointmentType', '')
@@ -96,6 +137,13 @@ def fill(template, data, fields, appointment=False):
 
 def fill_form10(data):
     # Supplied 별지 제10호서식, table 0. Different address/name cells stay distinct.
+    required = ('ownerName', 'ownerRepresentative', 'businessNumber', 'ownerAddress', 'ownerPhone',
+                'buildingArea', 'buildingUse', 'buildingAddress', 'managerName', 'managerBirth',
+                'managerAddress', 'managerGrade', 'appointmentDate', 'licenseNumber', 'reportDate',
+                'appointmentType')
+    missing = [name for name in required if not str(data.get(name, '')).strip()]
+    if missing:
+        raise ValueError('필수 입력값이 비어 있어 빈 서식은 생성하지 않습니다: ' + ', '.join(missing))
     fields = [
         (8, 4, 'ownerName'), (20, 4, 'ownerRepresentative'), (34, 4, 'businessNumber'),
         (8, 5, 'ownerAddress'), (34, 5, 'ownerPhone'),
@@ -123,6 +171,83 @@ def fill_form12(data):
     return fill(template_for('form12'), data, fields)
 
 
+FONT_PATH = Path(r'C:\Windows\Fonts\malgun.ttf')
+
+
+def preview_font(size):
+    """Use a Korean-capable font when producing an in-browser form preview."""
+    try:
+        return ImageFont.truetype(str(FONT_PATH), size)
+    except OSError:
+        return ImageFont.load_default()
+
+
+def draw_value(draw, position, value, max_width, size=10):
+    """Write a generated field into the matching blank cell of the supplied form."""
+    value = str(value or '')
+    font_size = size
+    font = preview_font(font_size)
+    while font_size > 7 and draw.textbbox((0, 0), value, font=font)[2] > max_width:
+        font_size -= 1
+        font = preview_font(font_size)
+    draw.text(position, value, fill=(0, 0, 0), font=font)
+
+
+def draw_date_parts(draw, value, positions):
+    """The printed form already says 년/월/일, so write only the three numbers."""
+    try:
+        year, month, day = value.split('-')
+        for position, part in zip(positions, (year, str(int(month)), str(int(day)))):
+            draw_value(draw, position, part, 38)
+    except ValueError:
+        draw_value(draw, positions[0], value, 130)
+
+
+def generated_preview(kind, data):
+    """Render the same input that will be inserted into the downloadable HWPX.
+
+    HWPX preview PNGs embedded in the original templates are intentionally blank.
+    This overlays the generated values on those exact supplied form images, so the
+    browser preview is a faithful view of the file about to be downloaded.
+    """
+    with zipfile.ZipFile(template_for(kind)) as source:
+        image = Image.open(BytesIO(source.read('Preview/PrvImage.png'))).convert('RGB')
+    draw = ImageDraw.Draw(image)
+    if kind == 'form10':
+        fields = [
+            ((190, 183), 'ownerName', 165), ((360, 183), 'ownerRepresentative', 150), ((518, 183), 'businessNumber', 130),
+            ((190, 216), 'ownerAddress', 320), ((518, 216), 'ownerPhone', 130),
+            ((370, 252), 'buildingArea', 54), ((465, 252), 'buildingUse', 180), ((190, 304), 'buildingAddress', 455),
+            ((190, 421), 'managerName', 150), ((348, 421), 'managerBirth', 300), ((190, 454), 'managerAddress', 455),
+            ((190, 488), 'managerGrade', 150), ((348, 488), 'appointmentDate', 150), ((508, 488), 'licenseNumber', 135),
+            ((445, 679), 'ownerName', 135),
+        ]
+        for position, name, width in fields:
+            value = date_kr(data.get(name, '')) if name in {'managerBirth', 'appointmentDate'} else data.get(name, '')
+            draw_value(draw, position, value, width)
+        if data.get('appointmentType') == '직접 선임':
+            draw.text((204, 342), '✓', fill=(0, 0, 0), font=preview_font(12))
+        elif data.get('appointmentType') == '위탁 수행':
+            draw.text((204, 371), '✓', fill=(0, 0, 0), font=preview_font(12))
+        # The template already prints 년·월·일.  Keep the numbers on that same
+        # baseline, immediately before each label, just as in the HWPX form.
+        draw_date_parts(draw, data.get('reportDate', ''), ((486, 646), (550, 646), (620, 646)))
+    else:
+        fields = [
+            ((150, 188), 'ownerName', 300), ((462, 188), 'ownerRepresentative', 180),
+            ((150, 240), 'businessNumber', 300), ((462, 240), 'ownerPhone', 180), ((150, 293), 'ownerAddress', 485),
+            ((245, 350), 'buildingArea', 205), ((460, 350), 'buildingUse', 180), ((150, 433), 'buildingAddress', 485),
+            ((150, 546), 'certificateReason', 235), ((400, 546), 'certificateCopies', 45), ((442, 695), 'ownerName', 135),
+        ]
+        for position, name, width in fields:
+            value = data.get(name, '')
+            draw_value(draw, position, value, width)
+        draw_date_parts(draw, data.get('reportDate', ''), ((550, 660), (594, 660), (636, 660)))
+    output = BytesIO()
+    image.save(output, format='PNG')
+    return output.getvalue()
+
+
 class Handler(BaseHTTPRequestHandler):
     def cors_origin(self):
         """Allow the two local addresses used when opening the portal."""
@@ -144,6 +269,18 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(204); self.send_response_headers(); self.end_headers()
 
     def do_GET(self):
+        if self.path.startswith('/admin/template/'):
+            kind = self.path.rsplit('/', 1)[-1]
+            if kind not in ('draft', 'certificate'):
+                self.send_error(404); return
+            content = draft_without_approvals() if kind == 'draft' else admin_template_for(kind).read_bytes()
+            self.send_response(200); self.send_header('Content-Type', 'application/pdf'); self.send_header('Content-Length', str(len(content))); self.send_header('Content-Disposition', 'attachment; filename="original-template.pdf"'); self.end_headers(); self.wfile.write(content); return
+        if self.path.startswith('/admin/preview/'):
+            kind = self.path.rsplit('/', 1)[-1]
+            if kind not in ('draft', 'certificate'):
+                self.send_error(404); return
+            content = draft_without_approvals() if kind == 'draft' else admin_template_for(kind).read_bytes()
+            self.send_response(200); self.send_header('Content-Type', 'application/pdf'); self.send_header('Content-Length', str(len(content))); self.end_headers(); self.wfile.write(content); return
         previews = {'/preview/form10': 'form10', '/preview/form12': 'form12'}
         if self.path not in previews:
             self.send_error(404); return
@@ -170,6 +307,13 @@ class Handler(BaseHTTPRequestHandler):
                 content, name = fill_form10(data), 'form10-filled.hwpx'
             elif self.path == '/generate/form12':
                 content, name = fill_form12(data), 'form12-filled.hwpx'
+            elif self.path == '/preview/generated/form10':
+                fill_form10(data)  # preview only a document that can really be generated
+                content = generated_preview('form10', data)
+                self.send_response(200); self.send_header('Access-Control-Allow-Origin', self.cors_origin()); self.send_header('Content-Type', 'image/png'); self.send_header('Content-Length', str(len(content))); self.end_headers(); self.wfile.write(content); return
+            elif self.path == '/preview/generated/form12':
+                content = generated_preview('form12', data)
+                self.send_response(200); self.send_header('Access-Control-Allow-Origin', self.cors_origin()); self.send_header('Content-Type', 'image/png'); self.send_header('Content-Length', str(len(content))); self.end_headers(); self.wfile.write(content); return
             else:
                 self.send_error(404); return
             self.send_response(200); self.send_response_headers(len(content), name); self.end_headers(); self.wfile.write(content)

@@ -1,0 +1,11 @@
+#appointment-form:has(.wizard-step.active[data-step="1"]) #create-draft,
+#appointment-form:has(.wizard-step.active[data-step="1"]) #create-certificate,
+#appointment-form:has(.wizard-step.active[data-step="1"]) #open-original-preview,
+#appointment-form:has(.wizard-step.active[data-step="2"]) #create-draft,
+#appointment-form:has(.wizard-step.active[data-step="2"]) #create-certificate,
+#appointment-form:has(.wizard-step.active[data-step="2"]) #open-original-preview,
+#appointment-form:has(.wizard-step.active[data-step="3"]) #create-draft,
+#appointment-form:has(.wizard-step.active[data-step="3"]) #create-certificate,
+#appointment-form:has(.wizard-step.active[data-step="3"]) #open-original-preview {
+  display: none !important;
+}
