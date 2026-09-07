@@ -30,6 +30,18 @@ async function adminDocument(kind,preview=false){const response=await fetch(`htt
 document.querySelectorAll('[data-download]').forEach(button=>button.onclick=async()=>{try{const blob=await adminDocument(button.dataset.download);const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=button.dataset.download==='draft'?'수리알림-결재전.hwpx':'선임신고증명서-발급신청서.hwpx';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}catch(error){alert(error.message)}});
 document.querySelectorAll('[data-preview]').forEach(button=>button.onclick=async()=>{try{const blob=await adminDocument(button.dataset.preview,true),dialog=$('preview');$('preview-frame').src=URL.createObjectURL(blob);dialog.showModal()}catch(error){alert(error.message)}});
 $('close-preview').onclick=()=>{$('preview-frame').src='about:blank';$('preview').close()};
-async function loadRegistry(){try{const query=encodeURIComponent($('registry-query').value.trim());const response=await fetch(`http://127.0.0.1:8091/admin/duplicate-registry?q=${query}`);const data=await response.json();$('registry-status').textContent=data.rows?.length?'':data.message;const table=data.rows?.length?`<div style="overflow:auto"><table><thead><tr>${data.fields.map(field=>`<th>${field}</th>`).join('')}</tr></thead><tbody>${data.rows.map(row=>`<tr>${data.fields.map(field=>`<td>${row[field]||''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="registry-results-note">조건에 맞는 대상자가 없습니다.</p>';$('registry-results').innerHTML=table;$('registry-search').disabled=!!data.locked}catch(error){$('registry-status').textContent=`조회명단을 불러오지 못했습니다: ${error.message}`}}
+async function loadRegistry(){try{
+  const query=$('registry-query').value.trim().toLowerCase();
+  const registryUrl=['127.0.0.1','localhost'].includes(location.hostname)
+    ? `http://127.0.0.1:8091/admin/duplicate-registry?q=${encodeURIComponent(query)}`
+    : './duplicate-registry.json';
+  const response=await fetch(registryUrl);
+  if(!response.ok)throw Error(`HTTP ${response.status}`);
+  const data=await response.json();
+  if(query && !['127.0.0.1','localhost'].includes(location.hostname)) data.rows=data.rows.filter(row=>Object.values(row).join(' ').toLowerCase().includes(query));
+  $('registry-status').textContent=data.rows?.length?'':data.message;
+  const table=data.rows?.length?`<div style="overflow:auto"><table><thead><tr>${data.fields.map(field=>`<th>${field}</th>`).join('')}</tr></thead><tbody>${data.rows.map(row=>`<tr>${data.fields.map(field=>`<td>${row[field]||''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="registry-results-note">조건에 맞는 대상자가 없습니다.</p>';
+  $('registry-results').innerHTML=table;$('registry-search').disabled=!!data.locked;
+}catch(error){$('registry-status').textContent=`조회명단을 불러오지 못했습니다: ${error.message}`}}
 $('registry-search').onclick=()=>loadRegistry();
 loadRegistry();
