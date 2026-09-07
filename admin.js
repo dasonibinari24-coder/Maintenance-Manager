@@ -39,7 +39,7 @@ async function loadRegistry(){try{
   if(!response.ok)throw Error(`HTTP ${response.status}`);
   const data=await response.json();
   if(query && !['127.0.0.1','localhost'].includes(location.hostname)) data.rows=data.rows.filter(row=>Object.values(row).join(' ').toLowerCase().includes(query));
-  $('registry-status').textContent=data.rows?.length?'':data.message;
+  $('registry-status').textContent=data.message || '';
   const table=data.rows?.length?`<div style="overflow:auto"><table><thead><tr>${data.fields.map(field=>`<th>${field}</th>`).join('')}</tr></thead><tbody>${data.rows.map(row=>`<tr>${data.fields.map(field=>`<td>${row[field]||''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="registry-results-note">조건에 맞는 대상자가 없습니다.</p>';
   $('registry-results').innerHTML=table;$('registry-search').disabled=!!data.locked;
 }catch(error){$('registry-status').textContent=`조회명단을 불러오지 못했습니다: ${error.message}`}}
