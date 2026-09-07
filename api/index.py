@@ -22,6 +22,7 @@ ET.register_namespace("hp", NS["hp"])
 def supplied_form(kind):
     names = {
         "draft": "\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc(TEST) [\uc8fc\uc18c_\uac74\ucd95\ubb3c\uba85].hwpx",
+        "form10": "\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218\u318d\uad00\ub9ac\uc790 \uc120\uc784\u318d\ud574\uc784 \uc2e0\uace0\uc11c.hwpx",
         "form12": "\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218\u318d\uad00\ub9ac\uc790 \uc120\uc784\uc2e0\uace0\uc99d\uba85\uc11c \ubc1c\uae09\uc2e0\uccad\uc11c.hwpx",
     }
     path = ROOT / names[kind]
@@ -90,6 +91,20 @@ def fill_certificate(data):
                 put_date(table, data.get("reportDate", ""))
                 content = ET.tostring(root, encoding="utf-8", xml_declaration=True)
             result.writestr(info, content)
+    return output.getvalue()
+
+
+def fill_form10(data):
+    fields=((8,4,"ownerName"),(20,4,"ownerRepresentative"),(34,4,"businessNumber"),(8,5,"ownerAddress"),(34,5,"ownerPhone"),(12,6,"buildingArea"),(30,6,"buildingUse"),(8,7,"buildingAddress"),(8,11,"managerName"),(19,11,"managerBirth"),(8,12,"managerAddress"),(8,13,"managerGrade"),(19,13,"appointmentDate"),(33,13,"licenseNumber"),(0,18,"reportDate"),(25,19,"ownerName"))
+    output=BytesIO()
+    with zipfile.ZipFile(supplied_form("form10")) as original, zipfile.ZipFile(output,"w",zipfile.ZIP_DEFLATED) as result:
+        for info in original.infolist():
+            content=original.read(info.filename)
+            if info.filename=="Contents/section0.xml":
+                root=ET.fromstring(content); table=root.findall(".//hp:tbl",NS)[0]
+                for col,row,name in fields: put(table,col,row,data.get(name,""))
+                content=ET.tostring(root,encoding="utf-8",xml_declaration=True)
+            result.writestr(info,content)
     return output.getvalue()
 
 
@@ -175,7 +190,11 @@ def app(environ, start_response):
         length = int(environ.get("CONTENT_LENGTH") or 0)
         data = json.loads(environ["wsgi.input"].read(length) or b"{}")
         if path == "/preview/generated/form10":
-            body, content_type = citizen_preview_svg(data), "image/svg+xml; charset=utf-8"
+            with zipfile.ZipFile(supplied_form("form10")) as source:
+                image = b64encode(source.read("Preview/PrvImage.png")).decode("ascii")
+            body, content_type = ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024"><image href="data:image/png;base64,'+image+'" width="724" height="1024"/></svg>').encode("utf-8"), "image/svg+xml; charset=utf-8"
+        elif path == "/generate/form10":
+            body, content_type = fill_form10(data), "application/vnd.hancom.hwpx"
         elif path in ("/admin/preview/draft", "/admin/preview/certificate"):
             if path.endswith("certificate"):
                 data.setdefault("reportDate", datetime.now().date().isoformat())
