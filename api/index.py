@@ -148,6 +148,17 @@ def preview_svg(kind, data):
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024" viewBox="0 0 724 1024"><image href="data:image/png;base64,' + encoded + '" width="724" height="1024"/>' + overlay + '</svg>').encode("utf-8")
 
 
+def citizen_preview_svg(data):
+    """Portable in-browser preview for the citizen form on Vercel."""
+    lines = [("\uad00\ub9ac\uc8fc\uccb4", data.get("ownerName", "")), ("\ub300\ud45c\uc790", data.get("ownerRepresentative", "")),
+             ("\ub300\uc0c1 \uac74\ucd95\ubb3c", data.get("buildingName", "")), ("\uc8fc\uc18c", data.get("buildingAddress", "")),
+             ("\uc5f0\uba74\uc801", data.get("buildingArea", "") + " m2"), ("\uc6a9\ub3c4", data.get("buildingUse", "")),
+             ("\uc720\uc9c0\uad00\ub9ac\uc790", data.get("managerName", "")), ("\uae30\uc220\uc790 \ub4f1\uae09", data.get("managerGrade", "")),
+             ("\uc120\uc784\uc77c", data.get("appointmentDate", "")), ("\uc2e0\uace0\uc77c", data.get("reportDate", ""))]
+    text = ''.join(f'<text x="75" y="{180+i*62}" font-size="21" font-family="Malgun Gothic, Arial, sans-serif">{escape(label)} : {escape(str(value))}</text>' for i,(label,value) in enumerate(lines))
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024"><rect width="100%" height="100%" fill="white"/><text x="75" y="95" font-size="30" font-weight="bold" font-family="Malgun Gothic, Arial, sans-serif">\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc120\uc784 \uc2e0\uace0\uc11c \ubbf8\ub9ac\ubcf4\uae30</text>'+text+'</svg>').encode('utf-8')
+
+
 def app(environ, start_response):
     """A dependency-free WSGI application understood directly by Vercel."""
     try:
@@ -163,7 +174,9 @@ def app(environ, start_response):
             path = path[path.index("/api/") + 4:]
         length = int(environ.get("CONTENT_LENGTH") or 0)
         data = json.loads(environ["wsgi.input"].read(length) or b"{}")
-        if path in ("/admin/preview/draft", "/admin/preview/certificate"):
+        if path == "/preview/generated/form10":
+            body, content_type = citizen_preview_svg(data), "image/svg+xml; charset=utf-8"
+        elif path in ("/admin/preview/draft", "/admin/preview/certificate"):
             if path.endswith("certificate"):
                 data.setdefault("reportDate", datetime.now().date().isoformat())
             body, content_type = preview_svg("draft" if path.endswith("draft") else "certificate", data), "image/svg+xml; charset=utf-8"

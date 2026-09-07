@@ -1,4 +1,5 @@
 (() => {
+  const formApi = ['127.0.0.1','localhost'].includes(location.hostname) ? 'http://127.0.0.1:8091' : '/api';
   const form = document.querySelector('#appointment-form');
   const report = document.querySelector('#create-draft');
   report.innerHTML = '신고서 생성 <span>↓</span>';
@@ -15,7 +16,7 @@
       .filter(field => !String(field.value || '').trim())
       .map(field => field.closest('label')?.childNodes[0]?.textContent?.trim() || field.name);
     if (missing.length) throw new Error(`빈칸이 있어 문서를 생성하지 않았습니다: ${missing.join(', ')}`);
-    const response = await fetch(`http://127.0.0.1:8091${path}`, {
+    const response = await fetch(`${formApi}${path}`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(Object.fromEntries(new FormData(form)))
     });
@@ -38,7 +39,7 @@
     let form10Url;
     try {
       const data = JSON.stringify(Object.fromEntries(new FormData(form)));
-      const form10 = await fetch('http://127.0.0.1:8091/preview/generated/form10', {method:'POST', headers:{'Content-Type':'application/json'}, body:data});
+      const form10 = await fetch(`${formApi}/preview/generated/form10`, {method:'POST', headers:{'Content-Type':'application/json'}, body:data});
       if (!form10.ok) throw new Error('생성 파일 미리보기를 만들지 못했습니다.');
       form10Url = URL.createObjectURL(await form10.blob());
     } catch (error) { alert(`생성 파일 미리보기에 실패했습니다. ${error.message}`); return; }
