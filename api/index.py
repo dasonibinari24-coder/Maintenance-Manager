@@ -150,6 +150,7 @@ def fill_draft(data):
                 # be invalidated by a serializer.  Replace only supplied text.
                 for before, after in replacements.items():
                     content = content.replace(before.encode("utf-8"), after.encode("utf-8"))
+                content = content.replace("\uc815\ubcf4\uc815\ucc45\ud300\uc7a5".encode("utf-8"), b"")
             result.writestr(info, content)
     return output.getvalue()
 
@@ -161,7 +162,8 @@ def preview_svg(kind, data):
         encoded = b64encode(archive.read("Preview/PrvImage.png")).decode("ascii")
     if kind == "draft":
         fields = [(114,194,540,data.get("ownerName","")+" \ub300\ud45c "+data.get("ownerRepresentative", "")),
-                  (114,241,540,"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc ["+data.get("buildingAddress","")+"_"+data.get("buildingName","")+"]"),
+                  (114,241,540,"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc"),
+                  (114,260,540,"["+data.get("buildingAddress","")+"_"+data.get("buildingName","")+"]"),
                   (114,411,500,"- \uc0c1\ud638(\uba85\uce6d) : "+data.get("ownerName", "")),(114,434,500,"- \ub300\ud45c\uc790 : "+data.get("ownerRepresentative", "")),
                   (114,505,500,"- \uc5f0\uba74\uc801 : "+data.get("buildingArea", "")+"m2"),(114,528,500,"- \uc6a9\ub3c4 : "+data.get("buildingUse", "")),
                   (114,551,500,"- \uc8fc\uc18c : "+data.get("buildingAddress", "")),
