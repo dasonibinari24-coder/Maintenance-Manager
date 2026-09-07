@@ -96,7 +96,7 @@ def fill_certificate(data):
 def fill_draft(data):
     """Fill the supplied pre-approval draft's placeholders only."""
     replacements = {
-        "\uc5ec\uc6b8\uc2dc\ud2f0 2\ucc28 \uad6c\ubd84\uc18c\uc720\uc790 \ub300\ud45c \uadc0\uc911": f"{data.get('ownerName', '')} \ub300\ud45c {data.get('ownerRepresentative', '')} \uadc0\uc911".strip(),
+        "\uc5ec\uc6b8\uc2dc\ud2f0 2\ucc28 \uad6c\ubd84\uc18c\uc720\uc790 \ub300\ud45c \uadc0\uc911": f"{data.get('ownerName', '')} \ub300\ud45c {data.get('ownerRepresentative', '')}".strip(),
         "\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc [\uc8fc\uc18c_\uac74\ucd95\ubb3c\uba85]": f"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc [{data.get('buildingAddress', '')}_{data.get('buildingName', '')}]",
         "- \uc0c1\ud638(\uba85\uce6d) :": f"- \uc0c1\ud638(\uba85\uce6d) : {data.get('ownerName', '')}",
         "- \ub300\ud45c\uc790 :": f"- \ub300\ud45c\uc790 : {data.get('ownerRepresentative', '')}",
@@ -139,6 +139,11 @@ def preview_svg(kind, data):
                   (515,375,100,data.get("buildingUse", "")),(150,433,485,data.get("buildingAddress", "")),
                   (150,546,235,data.get("certificateReason", "")),(475,530,120,data.get("certificateCopies", "")),
                   (442,680,135,data.get("ownerName", ""))]
+        try:
+            year, month, day = data.get("reportDate", "").split("-")
+            fields.extend([(510,632,45,year),(580,632,30,str(int(month))),(622,632,30,str(int(day)))])
+        except ValueError:
+            pass
     overlay = ''.join(f'<rect x="{x}" y="{y-16}" width="{width}" height="22" fill="white"/><text x="{x}" y="{y}" font-size="13" font-family="Malgun Gothic, Arial, sans-serif">{escape(str(value))}</text>' for x,y,width,value in fields)
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024" viewBox="0 0 724 1024"><image href="data:image/png;base64,' + encoded + '" width="724" height="1024"/>' + overlay + '</svg>').encode("utf-8")
 
