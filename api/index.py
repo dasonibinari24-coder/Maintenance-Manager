@@ -141,12 +141,12 @@ def preview_svg(kind, data):
     with zipfile.ZipFile(template) as archive:
         encoded = b64encode(archive.read("Preview/PrvImage.png")).decode("ascii")
     if kind == "draft":
-        fields = [(110,179,570,data.get("ownerName","")+" \ub300\ud45c "+data.get("ownerRepresentative", "")),
-                  (110,226,570,"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc ["+data.get("buildingAddress","")+"_"+data.get("buildingName","")+"]"),
-                  (185,399,470,data.get("ownerName", "")),(185,423,470,data.get("ownerRepresentative", "")),
-                  (185,493,470,data.get("buildingArea", "")+"m2"),(165,516,490,data.get("buildingUse", "")),
-                  (165,539,490,data.get("buildingAddress", "")),
-                  (112,608,560,"\uc120\uc784 / "+data.get("managerName","")+" / "+data.get("managerGrade","")+" / "+data.get("appointmentDate", ""))]
+        fields = [(114,194,540,data.get("ownerName","")+" \ub300\ud45c "+data.get("ownerRepresentative", "")),
+                  (114,241,540,"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc ["+data.get("buildingAddress","")+"_"+data.get("buildingName","")+"]"),
+                  (114,411,500,data.get("ownerName", "")),(114,434,500,data.get("ownerRepresentative", "")),
+                  (114,505,500,data.get("buildingArea", "")+"m2"),(114,528,500,data.get("buildingUse", "")),
+                  (114,551,500,data.get("buildingAddress", "")),
+                  (114,619,500,"\uc120\uc784 / "+data.get("managerName","")+" / "+data.get("managerGrade","")+" / "+data.get("appointmentDate", ""))]
     else:
         fields = [(150,188,300,data.get("ownerName", "")),(462,188,180,data.get("ownerRepresentative", "")),
                   (150,240,300,data.get("businessNumber", "")),(462,240,180,data.get("ownerPhone", "")),
@@ -174,6 +174,14 @@ def citizen_preview_svg(data):
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024"><rect width="100%" height="100%" fill="white"/><text x="75" y="95" font-size="30" font-weight="bold" font-family="Malgun Gothic, Arial, sans-serif">\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc120\uc784 \uc2e0\uace0\uc11c \ubbf8\ub9ac\ubcf4\uae30</text>'+text+'</svg>').encode('utf-8')
 
 
+def form10_preview_svg(data):
+    with zipfile.ZipFile(supplied_form("form10")) as source:
+        image=b64encode(source.read("Preview/PrvImage.png")).decode("ascii")
+    fields=[(300,185,105,data.get("ownerName","")),(535,185,100,data.get("ownerRepresentative","")),(790,185,110,data.get("businessNumber","")),(300,235,360,data.get("ownerAddress","")),(785,235,115,data.get("ownerPhone","")),(415,300,170,data.get("buildingArea","")),(705,300,170,data.get("buildingUse","")),(300,360,590,data.get("buildingAddress","")),(300,530,170,data.get("managerName","")),(530,530,170,data.get("managerBirth","")),(300,590,590,data.get("managerAddress","")),(300,650,170,data.get("managerGrade","")),(530,650,170,data.get("appointmentDate","")),(785,650,110,data.get("licenseNumber",""))]
+    overlay=''.join(f'<rect x="{x}" y="{y-18}" width="{w}" height="25" fill="white"/><text x="{x}" y="{y}" font-size="13" font-family="Malgun Gothic, Arial, sans-serif">{escape(str(v))}</text>' for x,y,w,v in fields)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1448" viewBox="0 0 1024 1448"><image href="data:image/png;base64,'+image+'" width="1024" height="1448"/>'+overlay+'</svg>').encode('utf-8')
+
+
 def app(environ, start_response):
     """A dependency-free WSGI application understood directly by Vercel."""
     try:
@@ -190,9 +198,7 @@ def app(environ, start_response):
         length = int(environ.get("CONTENT_LENGTH") or 0)
         data = json.loads(environ["wsgi.input"].read(length) or b"{}")
         if path == "/preview/generated/form10":
-            with zipfile.ZipFile(supplied_form("form10")) as source:
-                image = b64encode(source.read("Preview/PrvImage.png")).decode("ascii")
-            body, content_type = ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024"><image href="data:image/png;base64,'+image+'" width="724" height="1024"/></svg>').encode("utf-8"), "image/svg+xml; charset=utf-8"
+            body, content_type = form10_preview_svg(data), "image/svg+xml; charset=utf-8"
         elif path == "/generate/form10":
             body, content_type = fill_form10(data), "application/vnd.hancom.hwpx"
         elif path in ("/admin/preview/draft", "/admin/preview/certificate"):
