@@ -54,6 +54,24 @@ def put(table, col, row, value):
         text.text = (text.text or "") + "\n" + str(value)
 
 
+def put_inline(table, col, row, value):
+    if not value:
+        return
+    text = cell_at(table, col, row).find(".//hp:t", NS)
+    if text is None:
+        put(table, col, row, value)
+    else:
+        text.text = (text.text or "") + " " + str(value)
+
+
+def put_report_date(table, col, row, value):
+    if not value:
+        return
+    year, month, day = value.split("-")
+    text = cell_at(table, col, row).find(".//hp:t", NS)
+    text.text = f"{year} \ub144     {int(month)} \uc6d4     {int(day)} \uc77c"
+
+
 def put_area(table, value):
     if value in (None, ""):
         return
@@ -102,7 +120,10 @@ def fill_form10(data):
             content=original.read(info.filename)
             if info.filename=="Contents/section0.xml":
                 root=ET.fromstring(content); table=root.findall(".//hp:tbl",NS)[0]
-                for col,row,name in fields: put(table,col,row,data.get(name,""))
+                for col,row,name in fields:
+                    if name == "appointmentDate": put_inline(table,col,row,data.get(name,""))
+                    elif name == "reportDate": put_report_date(table,col,row,data.get(name,""))
+                    else: put(table,col,row,data.get(name,""))
                 content=ET.tostring(root,encoding="utf-8",xml_declaration=True)
             result.writestr(info,content)
     return output.getvalue()
