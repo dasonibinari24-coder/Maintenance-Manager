@@ -5,6 +5,8 @@ uploaded by a citizen is stored by this function.
 """
 from datetime import datetime
 from io import BytesIO
+from base64 import b64encode
+from html import escape
 import json
 from pathlib import Path
 from urllib.parse import urlparse
@@ -91,10 +93,54 @@ def fill_certificate(data):
     return output.getvalue()
 
 
-def preview(kind):
+def fill_draft(data):
+    """Fill the supplied pre-approval draft's placeholders only."""
+    replacements = {
+        "\uc5ec\uc6b8\uc2dc\ud2f0 2\ucc28 \uad6c\ubd84\uc18c\uc720\uc790 \ub300\ud45c \uadc0\uc911": f"{data.get('ownerName', '')} \ub300\ud45c {data.get('ownerRepresentative', '')} \uadc0\uc911".strip(),
+        "\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc [\uc8fc\uc18c_\uac74\ucd95\ubb3c\uba85]": f"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc [{data.get('buildingAddress', '')}_{data.get('buildingName', '')}]",
+        "- \uc0c1\ud638(\uba85\uce6d) :": f"- \uc0c1\ud638(\uba85\uce6d) : {data.get('ownerName', '')}",
+        "- \ub300\ud45c\uc790 :": f"- \ub300\ud45c\uc790 : {data.get('ownerRepresentative', '')}",
+        "- \uc5f0\uba74\uc801 :": f"- \uc5f0\uba74\uc801 : {data.get('buildingArea', '')}m2",
+        "- \uc6a9\ub3c4 :": f"- \uc6a9\ub3c4 : {data.get('buildingUse', '')}",
+        "- \uc8fc\uc18c :": f"- \uc8fc\uc18c : {data.get('buildingAddress', '')}",
+        "\uc120\uc784 / 000 / 0\uae09 /0000-00-00": f"\uc120\uc784 / {data.get('managerName', '')} / {data.get('managerGrade', '')} / {data.get('appointmentDate', '')}",
+    }
+    output = BytesIO()
+    with zipfile.ZipFile(supplied_form("draft")) as original, zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as result:
+        for info in original.infolist():
+            content = original.read(info.filename)
+            if info.filename == "Contents/section0.xml":
+                root = ET.fromstring(content)
+                for text in root.findall(".//hp:t", NS):
+                    key = (text.text or "").strip()
+                    if key in replacements:
+                        text.text = replacements[key]
+                content = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+            result.writestr(info, content)
+    return output.getvalue()
+
+
+def preview_svg(kind, data):
+    """Overlay current values onto the supplied preview image in browser-safe SVG."""
     template = supplied_form("draft" if kind == "draft" else "form12")
     with zipfile.ZipFile(template) as archive:
-        return archive.read("Preview/PrvImage.png")
+        encoded = b64encode(archive.read("Preview/PrvImage.png")).decode("ascii")
+    if kind == "draft":
+        fields = [(110,179,570,data.get("ownerName","")+" \ub300\ud45c "+data.get("ownerRepresentative", "")),
+                  (110,226,570,"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc ["+data.get("buildingAddress","")+"_"+data.get("buildingName","")+"]"),
+                  (185,399,470,data.get("ownerName", "")),(185,423,470,data.get("ownerRepresentative", "")),
+                  (185,493,470,data.get("buildingArea", "")+"m2"),(165,516,490,data.get("buildingUse", "")),
+                  (165,539,490,data.get("buildingAddress", "")),
+                  (112,608,560,"\uc120\uc784 / "+data.get("managerName","")+" / "+data.get("managerGrade","")+" / "+data.get("appointmentDate", ""))]
+    else:
+        fields = [(150,188,300,data.get("ownerName", "")),(462,188,180,data.get("ownerRepresentative", "")),
+                  (150,240,300,data.get("businessNumber", "")),(462,240,180,data.get("ownerPhone", "")),
+                  (150,293,485,data.get("ownerAddress", "")),(350,368,55,data.get("buildingArea", "")),
+                  (515,375,100,data.get("buildingUse", "")),(150,433,485,data.get("buildingAddress", "")),
+                  (150,546,235,data.get("certificateReason", "")),(475,530,120,data.get("certificateCopies", "")),
+                  (442,680,135,data.get("ownerName", ""))]
+    overlay = ''.join(f'<rect x="{x}" y="{y-16}" width="{width}" height="22" fill="white"/><text x="{x}" y="{y}" font-size="13" font-family="Malgun Gothic, Arial, sans-serif">{escape(str(value))}</text>' for x,y,width,value in fields)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024" viewBox="0 0 724 1024"><image href="data:image/png;base64,' + encoded + '" width="724" height="1024"/>' + overlay + '</svg>').encode("utf-8")
 
 
 def app(environ, start_response):
@@ -113,9 +159,11 @@ def app(environ, start_response):
         length = int(environ.get("CONTENT_LENGTH") or 0)
         data = json.loads(environ["wsgi.input"].read(length) or b"{}")
         if path in ("/admin/preview/draft", "/admin/preview/certificate"):
-            body, content_type = preview("draft" if path.endswith("draft") else "certificate"), "image/png"
+            if path.endswith("certificate"):
+                data.setdefault("reportDate", datetime.now().date().isoformat())
+            body, content_type = preview_svg("draft" if path.endswith("draft") else "certificate", data), "image/svg+xml; charset=utf-8"
         elif path == "/admin/document/draft":
-            body, content_type = supplied_form("draft").read_bytes(), "application/vnd.hancom.hwpx"
+            body, content_type = fill_draft(data), "application/vnd.hancom.hwpx"
         elif path == "/admin/document/certificate":
             data["reportDate"] = datetime.now().date().isoformat()
             body, content_type = fill_certificate(data), "application/vnd.hancom.hwpx"
