@@ -4,7 +4,6 @@ Only the three originals used in the administrator screen are read.  Nothing
 uploaded by a citizen is stored by this function.
 """
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler
 from io import BytesIO
 import json
 from pathlib import Path
@@ -98,42 +97,39 @@ def preview(kind):
         return archive.read("Preview/PrvImage.png")
 
 
-class handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        path = urlparse(self.path).path
+def app(environ, start_response):
+    """A dependency-free WSGI application understood directly by Vercel."""
+    try:
+        if environ.get("REQUEST_METHOD") == "OPTIONS":
+            start_response("204 No Content", [("Access-Control-Allow-Origin", "*"),
+                                                ("Access-Control-Allow-Headers", "Content-Type")])
+            return [b""]
+        if environ.get("REQUEST_METHOD") != "POST":
+            start_response("405 Method Not Allowed", [("Content-Type", "text/plain")])
+            return [b"POST only"]
+        path = environ.get("PATH_INFO", "")
         if "/api/" in path:
             path = path[path.index("/api/") + 4:]
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            data = json.loads(self.rfile.read(length) or b"{}")
-            if path in ("/admin/preview/draft", "/admin/preview/certificate"):
-                body = preview("draft" if path.endswith("draft") else "certificate")
-                self.send_binary(200, "image/png", body)
-                return
-            if path == "/admin/document/draft":
-                self.send_binary(200, "application/vnd.hancom.hwpx", supplied_form("draft").read_bytes())
-                return
-            if path == "/admin/document/certificate":
-                data["reportDate"] = datetime.now().date().isoformat()
-                self.send_binary(200, "application/vnd.hancom.hwpx", fill_certificate(data))
-                return
-            self.send_error(404, "unknown API route")
-        except Exception as error:
-            self.send_error(500, str(error))
+        length = int(environ.get("CONTENT_LENGTH") or 0)
+        data = json.loads(environ["wsgi.input"].read(length) or b"{}")
+        if path in ("/admin/preview/draft", "/admin/preview/certificate"):
+            body, content_type = preview("draft" if path.endswith("draft") else "certificate"), "image/png"
+        elif path == "/admin/document/draft":
+            body, content_type = supplied_form("draft").read_bytes(), "application/vnd.hancom.hwpx"
+        elif path == "/admin/document/certificate":
+            data["reportDate"] = datetime.now().date().isoformat()
+            body, content_type = fill_certificate(data), "application/vnd.hancom.hwpx"
+        else:
+            start_response("404 Not Found", [("Content-Type", "text/plain")])
+            return [b"unknown API route"]
+        start_response("200 OK", [("Content-Type", content_type), ("Content-Length", str(len(body))),
+                                    ("Cache-Control", "no-store")])
+        return [body]
+    except Exception as error:
+        message = f"API error: {error}".encode("utf-8", "replace")
+        start_response("500 Internal Server Error", [("Content-Type", "text/plain; charset=utf-8"),
+                                                       ("Content-Length", str(len(message)))])
+        return [message]
 
-    def do_OPTIONS(self):
-        self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
 
-    def send_binary(self, status, content_type, body):
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *_):
-        pass
+application = app
