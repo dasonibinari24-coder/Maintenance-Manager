@@ -125,6 +125,8 @@ def fill_form10(data):
                     elif name == "reportDate": put_report_date(table,col,row,data.get(name,""))
                     else: put(table,col,row,data.get(name,""))
                 content=ET.tostring(root,encoding="utf-8",xml_declaration=True)
+                if data.get("appointmentType") == "\uc704\ud0c1 \uc218\ud589":
+                    content=content.replace("\uc704\ud0c1 \uc218\ud589".encode("utf-8"), "\u2611 \uc704\ud0c1 \uc218\ud589".encode("utf-8"), 1)
             result.writestr(info,content)
     return output.getvalue()
 
@@ -133,7 +135,7 @@ def fill_draft(data):
     """Fill the supplied pre-approval draft's placeholders only."""
     replacements = {
         "\uc5ec\uc6b8\uc2dc\ud2f0 2\ucc28 \uad6c\ubd84\uc18c\uc720\uc790 \ub300\ud45c \uadc0\uc911": f"{data.get('ownerName', '')} \ub300\ud45c {data.get('ownerRepresentative', '')}".strip(),
-        "\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc [\uc8fc\uc18c_\uac74\ucd95\ubb3c\uba85]": f"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc [{data.get('buildingAddress', '')}_{data.get('buildingName', '')}]",
+        "\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc [\uc8fc\uc18c_\uac74\ucd95\ubb3c\uba85]": f"\uc815\ubcf4\ud1b5\uc2e0\uc124\ube44 \uc720\uc9c0\ubcf4\uc218 \uad00\ub9ac\uc790 \uc120\uc784 \uc2e0\uace0\uc11c \uc218\ub9ac \uc54c\ub9bc\n[{data.get('buildingAddress', '')}_{data.get('buildingName', '')}]",
         "- \uc0c1\ud638(\uba85\uce6d) :": f"- \uc0c1\ud638(\uba85\uce6d) : {data.get('ownerName', '')}",
         "- \ub300\ud45c\uc790 :": f"- \ub300\ud45c\uc790 : {data.get('ownerRepresentative', '')}",
         "- \uc5f0\uba74\uc801 :": f"- \uc5f0\uba74\uc801 : {data.get('buildingArea', '')}m2",
