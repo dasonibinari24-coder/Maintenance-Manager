@@ -146,12 +146,10 @@ def fill_draft(data):
         for info in original.infolist():
             content = original.read(info.filename)
             if info.filename == "Contents/section0.xml":
-                root = ET.fromstring(content)
-                for text in root.findall(".//hp:t", NS):
-                    key = (text.text or "").strip()
-                    if key in replacements:
-                        text.text = replacements[key]
-                content = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+                # Do not parse/rewrite HWPX XML: Hancom's package metadata can
+                # be invalidated by a serializer.  Replace only supplied text.
+                for before, after in replacements.items():
+                    content = content.replace(before.encode("utf-8"), after.encode("utf-8"))
             result.writestr(info, content)
     return output.getvalue()
 
