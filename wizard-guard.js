@@ -13,7 +13,7 @@
     ownerName: 'ownerName', ownerRepresentative: 'ownerRepresentative', businessNumber: 'businessNumber',
     ownerPhone: 'ownerPhone', ownerAddress: 'ownerAddress', managerName: 'name', managerGrade: 'grade',
     managerBirth: 'managerBirth', licenseNumber: 'licenseNumber', appointmentDate: 'date',
-    managerAddress: 'managerAddress', reportDate: 'date', appointmentType: 'appointmentType',
+    managerAddress: 'managerAddress', appointmentType: 'appointmentType',
     certificateReason: 'certificateReason', certificateCopies: 'certificateCopies',
   };
 

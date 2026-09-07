@@ -24,7 +24,7 @@
 </head>
 <body>
   <a class="skip" href="#main">본문으로 바로가기</a>
-  <header class="header"><div class="wrap nav"><a class="brand" href="#top"><span class="brand-mark">i</span><span>시설관리 <b>안내</b></span></a><nav aria-label="주요 메뉴"><a href="#upload">문서 확인</a><a href="#start">처음부터 안내</a><a href="#standards">선임 기준</a><a href="#qa">질의응답</a><a href="#forms">서식 자료</a><a href="#laws">관련법령</a></nav><a class="nav-cta" href="#upload">문서 올리기 <span>→</span></a><a class="admin-link" href="admin.html" target="_blank" rel="noopener">시군구청 관리자 <span>↗</span></a></div></header>
+  <header class="header"><div class="wrap nav"><a class="brand" href="#top"><span class="brand-mark">i</span><span>시설관리 <b>안내</b></span></a><nav aria-label="주요 메뉴"><a href="#upload">문서 확인</a><a href="#start">처음부터 안내</a><a href="#standards">선임 기준</a><a href="#qa">질의응답</a><a href="#forms">서식 자료</a><a href="#laws">관련법령</a></nav><a class="nav-cta" href="#upload">문서 올리기 <span>→</span></a><a class="admin-link" href="./admin.html" aria-label="시군구청 관리자 페이지로 이동">시군구청 관리자 <span>↗</span></a></div></header>
   <main id="main">
     <section class="hero unified-hero" id="top"><div class="wrap"><div class="hero-heading"><p class="eyebrow">FACILITY MANAGER APPOINTMENT</p><h1>두 가지 선임신고를,<br><em>한 곳에서 확인하세요.</em></h1><p class="lead">정보통신설비와 기계설비를 동시에 안내합니다. 문서를 올려 자동 분류하거나 원하는 분야를 직접 선택해 시작하세요.</p></div><div class="service-pills"><a href="#calculator"><img class="guide-character" src="communication-guide.png" alt="정보통신설비 안내 여성 캐릭터"><span class="pill-icon comm">⌁</span><span><b>정보통신설비</b><small>유지관리자 선임신고</small></span><i>→</i></a><a href="#machine-calculator"><img class="guide-character" src="mechanical-guide.png" alt="기계설비 안내 남성 캐릭터"><span class="pill-icon mech">⚙</span><span><b>기계설비</b><small>유지관리자 선임신고</small></span><i>→</i></a></div>
       <section class="upload-card unified-upload" id="upload" aria-labelledby="upload-title"><div class="upload-card-head"><span class="glass-icon">⌕</span><div><p>AUTO DOCUMENT CHECK</p><h2 id="upload-title">문서 올려서 확인하기</h2></div></div><p class="upload-intro">신고서, 안내문, 통지서, 계획서 등을 올리세요. 정보통신·기계설비 유형을 자동으로 분류합니다.</p><input id="file-input" type="file" accept=".pdf,.jpg,.jpeg,.png,.hwpx" hidden><label class="drop-zone" id="drop-zone" for="file-input"><span class="upload-arrow">↑</span><strong>여기를 눌러 문서를 선택하세요</strong><small>또는 파일을 이 영역으로 끌어 놓으세요</small><span class="file-types">PDF&nbsp;&nbsp; JPG&nbsp;&nbsp; PNG&nbsp;&nbsp; HWPX</span></label><div class="selected-file" id="selected-file" aria-live="polite"><span class="file-dot">+</span><span>선택한 파일이 없습니다.</span></div><div class="consent"><label><input id="privacy-check" type="checkbox"><span>업로드 문서는 이 브라우저에서만 확인하며, 분석 후 즉시 삭제할 수 있음을 확인했습니다.</span></label><label><input id="notice-check" type="checkbox"><span>분류 및 분석 결과는 참고용이며 최종 확인은 담당 기관에 해야 함을 이해했습니다.</span></label></div><button id="analyze-file" class="analyze-button" type="button" disabled>문서 유형 확인하기 <span>→</span></button><div class="analysis-result" id="analysis-result" aria-live="polite"></div></section>
@@ -46,13 +46,13 @@
   <footer><div class="wrap footer-inner"><a class="brand" href="#top"><span class="brand-mark">i</span><span>시설관리 <b>안내</b></span></a><p>정보통신·기계설비 유지관리자 선임신고 안내</p><a href="#top">맨 위로 ↑</a></div></footer>
   <script src="script.js"></script>
   <script src="save.js"></script>
-  <script src="wizard.js"></script>
+  <script src="wizard.js?v=20260907a"></script>
   <script src="wizard-next.js"></script>
   <script src="original-hwpx.js?v=20260904h"></script>
   <script src="enter-navigation.js"></script>
   <script src="calculator-enter.js"></script>
   <script src="qa-chat.js"></script>
-  <script src="multi-upload.js?v=20260904i"></script>
-  <script src="wizard-guard.js?v=20260904f"></script>
+  <script src="multi-upload.js?v=20260907a"></script>
+  <script src="wizard-guard.js?v=20260907a"></script>
 </body>
 </html>

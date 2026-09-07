@@ -21,6 +21,12 @@ function addOfficialFields() {
   grid.insertAdjacentHTML('beforeend', '<label>신고일<input name="reportDate" required type="date"></label><label>증명서 발급 부수<input name="certificateCopies" required type="number" min="1" value="1"></label><label class="full">신청사유<input name="certificateReason" required value="선임신고증명서 발급" placeholder="예: 선임신고증명서 발급"></label>');
 }
 
+function koreaToday() {
+  const parts = new Intl.DateTimeFormat('en-US', {timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit'})
+    .formatToParts(new Date()).reduce((result, part) => ({...result, [part.type]:part.value}), {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 function startWizard(kind, grade, area) {
   addOfficialFields();
   wizard.classList.remove('hidden');
@@ -29,7 +35,7 @@ function startWizard(kind, grade, area) {
   document.querySelector('#wizard-kind').textContent = `${kind} 선임신고`;
   form.elements.buildingArea.value = area || '';
   form.elements.managerGrade.value = grade;
-  if (!form.elements.reportDate.value) form.elements.reportDate.value = new Date().toISOString().slice(0, 10);
+  if (!form.elements.reportDate.value) form.elements.reportDate.value = koreaToday();
   current = 1;
   renderWizard();
   wizard.scrollIntoView({ behavior: 'smooth', block: 'start' });
