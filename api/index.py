@@ -64,6 +64,18 @@ def put_inline(table, col, row, value):
         text.text = (text.text or "") + " " + str(value)
 
 
+def put_blank_cell(table, col, row, value):
+    """Write the first visible text node into an originally blank form cell."""
+    if not value:
+        return
+    cell = cell_at(table, col, row)
+    text = cell.find(".//hp:t", NS)
+    if text is None:
+        run = cell.find(".//hp:run", NS)
+        text = ET.SubElement(run, f"{{{NS['hp']}}}t")
+    text.text = str(value)
+
+
 def put_report_date(table, col, row, value):
     if not value:
         return
@@ -104,7 +116,8 @@ def fill_certificate(data):
                 root = ET.fromstring(content)
                 table = root.findall(".//hp:tbl", NS)[0]
                 for col, row, name in fields:
-                    put(table, col, row, data.get(name, ""))
+                    if name == "certificateCopies": put_blank_cell(table, col, row, data.get(name, ""))
+                    else: put(table, col, row, data.get(name, ""))
                 put_area(table, data.get("buildingArea", ""))
                 put_date(table, data.get("reportDate", ""))
                 content = ET.tostring(root, encoding="utf-8", xml_declaration=True)
