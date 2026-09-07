@@ -177,9 +177,9 @@ def citizen_preview_svg(data):
 def form10_preview_svg(data):
     with zipfile.ZipFile(supplied_form("form10")) as source:
         image=b64encode(source.read("Preview/PrvImage.png")).decode("ascii")
-    fields=[(300,185,105,data.get("ownerName","")),(535,185,100,data.get("ownerRepresentative","")),(790,185,110,data.get("businessNumber","")),(300,235,360,data.get("ownerAddress","")),(785,235,115,data.get("ownerPhone","")),(415,300,170,data.get("buildingArea","")),(705,300,170,data.get("buildingUse","")),(300,360,590,data.get("buildingAddress","")),(300,530,170,data.get("managerName","")),(530,530,170,data.get("managerBirth","")),(300,590,590,data.get("managerAddress","")),(300,650,170,data.get("managerGrade","")),(530,650,170,data.get("appointmentDate","")),(785,650,110,data.get("licenseNumber",""))]
+    fields=[(190,183,165,data.get("ownerName","")),(360,183,150,data.get("ownerRepresentative","")),(518,183,130,data.get("businessNumber","")),(190,216,320,data.get("ownerAddress","")),(518,216,130,data.get("ownerPhone","")),(370,252,54,data.get("buildingArea","")),(465,252,180,data.get("buildingUse","")),(190,304,455,data.get("buildingAddress","")),(190,421,150,data.get("managerName","")),(348,421,150,data.get("managerBirth","")),(190,454,455,data.get("managerAddress","")),(190,488,150,data.get("managerGrade","")),(348,488,150,data.get("appointmentDate","")),(508,488,135,data.get("licenseNumber",""))]
     overlay=''.join(f'<rect x="{x}" y="{y-18}" width="{w}" height="25" fill="white"/><text x="{x}" y="{y}" font-size="13" font-family="Malgun Gothic, Arial, sans-serif">{escape(str(v))}</text>' for x,y,w,v in fields)
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1448" viewBox="0 0 1024 1448"><image href="data:image/png;base64,'+image+'" width="1024" height="1448"/>'+overlay+'</svg>').encode('utf-8')
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024" viewBox="0 0 724 1024"><image href="data:image/png;base64,'+image+'" width="724" height="1024"/>'+overlay+'</svg>').encode('utf-8')
 
 
 def app(environ, start_response):
