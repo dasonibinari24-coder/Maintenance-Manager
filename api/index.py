@@ -196,7 +196,11 @@ def citizen_preview_svg(data):
 def form10_preview_svg(data):
     with zipfile.ZipFile(supplied_form("form10")) as source:
         image=b64encode(source.read("Preview/PrvImage.png")).decode("ascii")
-    fields=[(190,183,165,data.get("ownerName","")),(360,183,150,data.get("ownerRepresentative","")),(518,183,130,data.get("businessNumber","")),(190,216,320,data.get("ownerAddress","")),(518,216,130,data.get("ownerPhone","")),(370,252,54,data.get("buildingArea","")),(465,252,180,data.get("buildingUse","")),(190,304,455,data.get("buildingAddress","")),(190,421,150,data.get("managerName","")),(348,421,150,data.get("managerBirth","")),(190,454,455,data.get("managerAddress","")),(190,488,150,data.get("managerGrade","")),(348,488,150,data.get("appointmentDate","")),(508,488,135,data.get("licenseNumber",""))]
+    fields=[(190,183,165,data.get("ownerName","")),(360,183,150,data.get("ownerRepresentative","")),(518,183,130,data.get("businessNumber","")),(190,216,320,data.get("ownerAddress","")),(518,216,130,data.get("ownerPhone","")),(370,252,54,data.get("buildingArea","")),(465,252,180,data.get("buildingUse","")),(190,304,455,data.get("buildingAddress","")),(190,421,150,data.get("managerName","")),(348,421,150,data.get("managerBirth","")),(190,454,455,data.get("managerAddress","")),(190,488,150,data.get("managerGrade","")),(348,488,150,data.get("appointmentDate","")),(508,488,135,data.get("licenseNumber","")),(445,679,135,data.get("ownerName",""))]
+    try:
+        year,month,day=data.get("reportDate","").split("-")
+        fields.extend([(486,646,42,year),(550,646,32,str(int(month))),(620,646,32,str(int(day)))])
+    except ValueError: pass
     overlay=''.join(f'<rect x="{x}" y="{y-18}" width="{w}" height="25" fill="white"/><text x="{x}" y="{y}" font-size="13" font-family="Malgun Gothic, Arial, sans-serif">{escape(str(v))}</text>' for x,y,w,v in fields)
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="724" height="1024" viewBox="0 0 724 1024"><image href="data:image/png;base64,'+image+'" width="724" height="1024"/>'+overlay+'</svg>').encode('utf-8')
 
@@ -217,8 +221,10 @@ def app(environ, start_response):
         length = int(environ.get("CONTENT_LENGTH") or 0)
         data = json.loads(environ["wsgi.input"].read(length) or b"{}")
         if path == "/preview/generated/form10":
+            data.setdefault("reportDate", datetime.now().date().isoformat())
             body, content_type = form10_preview_svg(data), "image/svg+xml; charset=utf-8"
         elif path == "/generate/form10":
+            data.setdefault("reportDate", datetime.now().date().isoformat())
             body, content_type = fill_form10(data), "application/vnd.hancom.hwpx"
         elif path in ("/admin/preview/draft", "/admin/preview/certificate"):
             if path.endswith("certificate"):
